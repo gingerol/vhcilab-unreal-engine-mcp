@@ -578,5 +578,242 @@ async def create_objects(
         logger.error(f"Object creation failed: {e}")
         return f"❌ **Object Creation Failed**: {str(e)}\n\nPlease ensure Unreal Engine is running with the UnrealMCP plugin enabled on port 55557."
 
+@mcp.tool()
+async def clear_workspace(
+    confirm: bool = False
+) -> str:
+    """
+    🗑️ Clear Unreal Engine Workspace
+    
+    Remove all actors from the current level to start with a clean workspace.
+    
+    Args:
+        confirm: Set to True to confirm you want to delete all actors
+    
+    Returns:
+        Status of workspace clearing operation
+    """
+    
+    if not confirm:
+        return "⚠️ Workspace clearing requires confirmation. Use clear_workspace(confirm=True) to proceed."
+    
+    logger.info("Clearing workspace - removing all actors")
+    
+    try:
+        ue_client = UnrealConnection()
+        
+        # Get all actors first
+        actors_response = await ue_client.send_command("get_all_actors", {})
+        
+        if actors_response.get("status") == "success":
+            actors = actors_response.get("actors", [])
+            deleted_count = 0
+            
+            for actor in actors:
+                # Skip essential actors like PlayerStart, WorldSettings, etc.
+                actor_class = actor.get("class", "")
+                if actor_class not in ["WorldSettings", "PlayerStart", "DefaultPawn", "LevelBounds"]:
+                    delete_result = await ue_client.send_command("delete_actor", {
+                        "actor_name": actor.get("name")
+                    })
+                    if delete_result.get("status") == "success":
+                        deleted_count += 1
+            
+            return f"✅ **Workspace Cleared Successfully**\n\n📊 Removed {deleted_count} actors from the level\n🎯 Workspace is now ready for new creations"
+        
+        return "❌ Failed to get actor list for workspace clearing"
+        
+    except Exception as e:
+        logger.error(f"Workspace clearing failed: {e}")
+        return f"❌ **Workspace Clearing Failed**: {str(e)}"
+
+@mcp.tool()
+async def list_actors(
+    filter_type: str = "all"
+) -> str:
+    """
+    📋 List All Actors in Scene
+    
+    Get detailed information about all actors currently in the Unreal Engine level.
+    
+    Args:
+        filter_type: Type of actors to list ("all", "lights", "meshes", "cameras", "audio")
+    
+    Returns:
+        Detailed list of actors with their properties
+    """
+    
+    logger.info(f"Listing actors with filter: {filter_type}")
+    
+    try:
+        ue_client = UnrealConnection()
+        response = await ue_client.send_command("get_all_actors", {})
+        
+        if response.get("status") == "success":
+            actors = response.get("actors", [])
+            
+            # Filter actors based on type
+            if filter_type != "all":
+                type_filters = {
+                    "lights": ["PointLight", "DirectionalLight", "SpotLight", "SkyLight"],
+                    "meshes": ["StaticMeshActor", "SkeletalMeshActor"],
+                    "cameras": ["CameraActor", "PlayerCameraManager"],
+                    "audio": ["AudioSource", "SoundActor"]
+                }
+                
+                if filter_type in type_filters:
+                    actors = [a for a in actors if a.get("class") in type_filters[filter_type]]
+            
+            response_text = f"📋 **Scene Actor List** ({filter_type})\n\n"
+            response_text += f"📊 **Total Actors Found**: {len(actors)}\n\n"
+            
+            for i, actor in enumerate(actors, 1):
+                name = actor.get("name", "Unknown")
+                actor_class = actor.get("class", "Unknown")
+                location = actor.get("location", {})
+                
+                response_text += f"**{i}. {name}**\n"
+                response_text += f"   🏷️ Type: {actor_class}\n"
+                
+                if location:
+                    x = location.get("x", 0)
+                    y = location.get("y", 0) 
+                    z = location.get("z", 0)
+                    response_text += f"   📍 Location: ({x:.1f}, {y:.1f}, {z:.1f})\n"
+                
+                response_text += "\n"
+            
+            return response_text
+        
+        return "❌ Failed to retrieve actor list from Unreal Engine"
+        
+    except Exception as e:
+        logger.error(f"List actors failed: {e}")
+        return f"❌ **List Actors Failed**: {str(e)}"
+
+@mcp.tool()
+async def delete_actors(
+    actor_names: str,
+    confirm: bool = False
+) -> str:
+    """
+    🗑️ Delete Specific Actors
+    
+    Remove specific actors from the scene by name or pattern.
+    
+    Args:
+        actor_names: Comma-separated list of actor names or patterns to delete
+        confirm: Set to True to confirm deletion
+    
+    Returns:
+        Status of deletion operation
+    """
+    
+    if not confirm:
+        return "⚠️ Actor deletion requires confirmation. Use delete_actors(actor_names='...', confirm=True)"
+    
+    logger.info(f"Deleting actors: {actor_names}")
+    
+    try:
+        ue_client = UnrealConnection()
+        names_to_delete = [name.strip() for name in actor_names.split(",")]
+        deleted_count = 0
+        failed_deletes = []
+        
+        for actor_name in names_to_delete:
+            delete_result = await ue_client.send_command("delete_actor", {
+                "actor_name": actor_name
+            })
+            
+            if delete_result.get("status") == "success":
+                deleted_count += 1
+            else:
+                failed_deletes.append(actor_name)
+        
+        response = f"🗑️ **Actor Deletion Complete**\n\n"
+        response += f"✅ Successfully deleted: {deleted_count} actors\n"
+        
+        if failed_deletes:
+            response += f"❌ Failed to delete: {', '.join(failed_deletes)}\n"
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Delete actors failed: {e}")
+        return f"❌ **Delete Actors Failed**: {str(e)}"
+
+@mcp.tool()
+async def move_actor(
+    actor_name: str,
+    x: float,
+    y: float, 
+    z: float
+) -> str:
+    """
+    🎯 Move Actor to New Location
+    
+    Move a specific actor to a new position in 3D space.
+    
+    Args:
+        actor_name: Name of the actor to move
+        x: X coordinate (forward/backward)
+        y: Y coordinate (left/right)
+        z: Z coordinate (up/down)
+    
+    Returns:
+        Status of move operation
+    """
+    
+    logger.info(f"Moving actor {actor_name} to ({x}, {y}, {z})")
+    
+    try:
+        ue_client = UnrealConnection()
+        result = await ue_client.send_command("set_actor_location", {
+            "actor_name": actor_name,
+            "location": {"x": x, "y": y, "z": z}
+        })
+        
+        if result.get("status") == "success":
+            return f"✅ **Actor Moved Successfully**\n\n🎯 {actor_name} moved to position ({x}, {y}, {z})"
+        else:
+            return f"❌ Failed to move {actor_name}: {result.get('error', 'Unknown error')}"
+            
+    except Exception as e:
+        logger.error(f"Move actor failed: {e}")
+        return f"❌ **Move Actor Failed**: {str(e)}"
+
+@mcp.tool()
+async def save_level(
+    level_name: str = ""
+) -> str:
+    """
+    💾 Save Current Level
+    
+    Save the current level with all changes.
+    
+    Args:
+        level_name: Optional name for the level (if creating new level)
+    
+    Returns:
+        Status of save operation
+    """
+    
+    logger.info(f"Saving level: {level_name}")
+    
+    try:
+        ue_client = UnrealConnection()
+        result = await ue_client.send_command("save_level", {
+            "level_name": level_name if level_name else None
+        })
+        
+        if result.get("status") == "success":
+            return f"💾 **Level Saved Successfully**\n\n✅ All changes have been saved to the level"
+        else:
+            return f"❌ Failed to save level: {result.get('error', 'Unknown error')}"
+            
+    except Exception as e:
+        logger.error(f"Save level failed: {e}")
+        return f"❌ **Save Level Failed**: {str(e)}"
+
 if __name__ == "__main__":
     mcp.run()
