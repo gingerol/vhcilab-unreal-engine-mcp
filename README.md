@@ -6,6 +6,8 @@ Create objects, lights, and structures in Unreal Engine using simple text comman
 
 **Built by VHCI Lab** for natural language scene building in Unreal Engine.
 
+**Author:** VHCI Lab Team
+
 ## 🔧 Key Features
 
 - **Natural Language Scene Building**: Describe what you want to create
