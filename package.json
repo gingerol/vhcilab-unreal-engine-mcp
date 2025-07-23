@@ -1,0 +1,26 @@
+{
+  "name": "@vhcilab/unreal-engine-mcp",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for natural language scene building in Unreal Engine",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "inspector": "npx @modelcontextprotocol/inspector dist/index.js"
+  },
+  "keywords": ["mcp", "unreal-engine", "vhcilab", "scene-building", "natural-language"],
+  "author": "VHCI Lab",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.7.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/ws": "^8.5.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

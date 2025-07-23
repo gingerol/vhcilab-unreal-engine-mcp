@@ -1,0 +1,24 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0",
+  "FriendlyName": "VHCI Lab Connected Spaces",
+  "Description": "Remote control and automation plugin for Unreal Engine by VHCI Lab",
+  "Category": "VHCI Lab",
+  "CreatedBy": "VHCI Lab",
+  "CreatedByURL": "",
+  "DocsURL": "",
+  "MarketplaceURL": "",
+  "SupportURL": "",
+  "CanContainContent": false,
+  "IsBetaVersion": false,
+  "IsExperimentalVersion": false,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "VHCILabConnectedSpaces",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ]
+}
